@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#06090f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trishul PRO">
+<meta name="description" content="Trishul PRO - Advanced Study Planner by Abhishek Sharma">
+<meta name="author" content="Abhishek Sharma">
+<link rel="manifest" href="./manifest.json">
+<!-- Apple Touch Icon (GitHub pe ek icon.png upload kar dena) -->
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>Trishul PRO by Abhishek Sharma</title>
+
+<!-- External Libraries (Service worker inhe offline ke liye cache karega) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+/* ... AAPKA PURA CSS EXACTLY SAME ... */
+:root {
+  --bg: #06090f; --bg2: #0d1326; --c1: rgba(18, 25, 43, 0.75); --c2: rgba(26, 36, 61, 0.85);
+  --ln: rgba(139, 92, 246, 0.18); --tx: #e8edf6; --dm: #8ca0c8;
+  --ac: #8b5cf6; --ac-glow: rgba(139, 92, 246, 0.5);
+  --gd: #f5c542; --gn: #10b981; --rd: #ef4444; --or: #f59e0b; --bl: #3b82f6;
+  --nav: 74px; --radius: 22px;
+  --glass: rgba(255,255,255,0.03);
+  --glass-border: rgba(255,255,255,0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; width: 100%; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--tx); overflow: hidden; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.4); border-radius: 4px; }
+
+.app { width: 100%; height: 100%; display: flex; flex-direction: column; background: radial-gradient(ellipse at top left, rgba(139, 92, 246, 0.08), transparent 50%), radial-gradient(ellipse at bottom right, rgba(245, 197, 66, 0.05), transparent 50%), var(--bg); position: relative; }
+@media (min-width: 768px) { .app { max-width: 480px; margin: 0 auto; box-shadow: 0 0 80px rgba(139, 92, 246, 0.12); border-left: 1px solid var(--ln); border-right: 1px solid var(--ln); } }
+
+.hdr { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: rgba(6, 9, 15, 0.85); border-bottom: 1px solid var(--ln); backdrop-filter: blur(20px); z-index: 20; flex-shrink: 0; }
+.hdr-brand { display: flex; align-items: center; gap: 12px; }
+.logo-glass { width: 44px; height: 44px; background: linear-gradient(145deg, rgba(139, 92, 246, 0.25), rgba(245, 197, 66, 0.15)); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(139, 92, 246, 0.2), inset 0 1px 0 rgba(255,255,255,0.1); backdrop-filter: blur(10px); position: relative; overflow: hidden; }
+.logo-glass::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%; background: linear-gradient(180deg, rgba(255,255,255,0.15), transparent); border-radius: 14px 14px 0 0; }
+.logo-glass span { position: relative; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+.hdr-txt { display: flex; flex-direction: column; }
+.hdr-title { font-size: 1.1rem; font-weight: 900; background: linear-gradient(135deg, var(--ac), var(--gd)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.3px; }
+.hdr-author { font-family: 'Dancing Script', cursive; font-size: 0.85rem; color: var(--gd); opacity: 0.9; margin-top: -2px; }
+.hdr-date { font-size: 0.75rem; color: var(--dm); font-weight: 600; text-align: right; }
+
+.mn { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px; padding-bottom: calc(var(--nav) + 24px); scroll-behavior: smooth; }
+
+.nav { position: absolute; bottom: 0; left: 0; right: 0; height: var(--nav); background: rgba(10, 14, 24, 0.9); border-top: 1px solid var(--ln); display: flex; justify-content: space-around; align-items: center; z-index: 30; backdrop-filter: blur(24px); padding-bottom: env(safe-area-inset-bottom); }
+.ni { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--dm); font-size: 0.6rem; font-weight: 700; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); width: 20%; height: 100%; cursor: pointer; position: relative; letter-spacing: 0.3px; }
+.ni-icon { font-size: 1.35rem; transition: transform 0.3s, filter 0.3s; }
+.ni.on { color: var(--gd); }
+.ni.on .ni-icon { transform: translateY(-3px) scale(1.15); filter: drop-shadow(0 4px 8px rgba(245, 197, 66, 0.5)); }
+.ni-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gd); position: absolute; bottom: 8px; opacity: 0; transition: 0.3s; transform: scale(0); box-shadow: 0 0 10px var(--gd); }
+.ni.on .ni-dot { opacity: 1; transform: scale(1); }
+
+.cd { background: var(--c1); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; backdrop-filter: blur(16px); box-shadow: 0 8px 40px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden; }
+.cd::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); }
+.cd h3 { font-size: 1rem; margin-bottom: 16px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+.rw { display: flex; align-items: center; gap: 10px; }
+.rw-between { display: flex; align-items: center; justify-content: space-between; }
+
+input, select, textarea { width: 100%; background: rgba(0,0,0,0.35); color: var(--tx); border: 1px solid var(--ln); border-radius: 14px; padding: 14px 16px; font: inherit; font-size: 0.9rem; outline: none; transition: 0.25s; margin-bottom: 12px; }
+input:focus, textarea:focus { border-color: var(--ac); box-shadow: 0 0 0 4px var(--ac-glow); }
+textarea { resize: vertical; min-height: 80px; }
+.btn { border: none; border-radius: 14px; padding: 14px 24px; font: inherit; font-size: 0.95rem; font-weight: 700; color: #fff; cursor: pointer; transition: all 0.2s; text-align: center; display: inline-flex; justify-content: center; align-items: center; gap: 8px; }
+.btn:active { transform: scale(0.96); }
+.btn-primary { background: linear-gradient(135deg, var(--ac), #7c3aed); box-shadow: 0 6px 20px var(--ac-glow); }
+.btn-glass { background: var(--glass); border: 1px solid var(--glass-border); color: var(--tx); backdrop-filter: blur(10px); }
+.btn-glass:hover { background: rgba(255,255,255,0.08); border-color: var(--ac); }
+.btn-full { width: 100%; }
+.btn-sm { padding: 10px 16px; font-size: 0.85rem; }
+.btn-danger { background: linear-gradient(135deg, var(--rd), #dc2626); }
+
+.pill-nav { display: flex; gap: 6px; background: rgba(0,0,0,0.35); padding: 5px; border-radius: 16px; margin-bottom: 16px; }
+.pill { flex: 1; text-align: center; padding: 12px 0; border-radius: 12px; font-size: 0.8rem; font-weight: 700; color: var(--dm); transition: 0.3s; cursor: pointer; }
+.pill.active { background: var(--c2); color: var(--tx); box-shadow: 0 4px 16px rgba(0,0,0,0.35); border: 1px solid var(--glass-border); }
+
+.tt-slot { display: flex; align-items: stretch; background: rgba(0,0,0,0.2); border-radius: 14px; margin-bottom: 10px; overflow: hidden; border: 1px solid transparent; transition: 0.2s; }
+.tt-slot:hover { border-color: var(--ln); }
+.tt-time { background: linear-gradient(135deg, var(--ac), var(--gd)); padding: 14px 12px; min-width: 70px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.tt-time-from { font-size: 0.9rem; font-weight: 800; color: #fff; }
+.tt-time-to { font-size: 0.7rem; color: rgba(255,255,255,0.8); margin-top: 2px; }
+.tt-content { flex: 1; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; }
+.tt-activity { font-size: 0.9rem; font-weight: 600; }
+.tt-cat { font-size: 0.65rem; color: var(--dm); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+.tt-actions { display: flex; gap: 6px; }
+
+.profile-header { text-align: center; padding: 20px 0; }
+.profile-avatar { width: 110px; height: 110px; border-radius: 50%; background: linear-gradient(145deg, var(--ac), var(--gd)); padding: 4px; margin: 0 auto 16px; box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3); }
+.profile-avatar-inner { width: 100%; height: 100%; border-radius: 50%; background: var(--bg2); display: flex; align-items: center; justify-content: center; font-size: 3rem; overflow: hidden; }
+.profile-avatar-inner img { width: 100%; height: 100%; object-fit: cover; }
+.profile-name { font-size: 1.5rem; font-weight: 900; margin-bottom: 4px; }
+.profile-bio { font-size: 0.85rem; color: var(--dm); max-width: 280px; margin: 0 auto; line-height: 1.5; }
+
+.goal-item { background: rgba(0,0,0,0.2); border-radius: 14px; padding: 14px; margin-bottom: 10px; border-left: 4px solid var(--ac); }
+.goal-title { font-size: 0.75rem; color: var(--gd); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.5px; }
+.goal-text { font-size: 0.9rem; line-height: 1.5; }
+
+.timer-wrap { display: flex; flex-direction: column; align-items: center; position: relative; padding: 24px 0; }
+.svg-ring { transform: rotate(-90deg); filter: drop-shadow(0 0 20px var(--ac-glow)); }
+.svg-circle-bg { stroke: rgba(255,255,255,0.06); }
+.svg-circle-prog { stroke: var(--ac); stroke-dasharray: 691; stroke-linecap: round; transition: stroke-dashoffset 0.5s linear, stroke 0.3s ease; }
+.timer-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 100%; }
+.timer-val { font-size: 3.8rem; font-weight: 900; font-family: 'Inter', monospace; letter-spacing: -2px; color: var(--tx); text-shadow: 0 0 30px var(--ac-glow); line-height: 1; }
+.timer-mode-txt { font-size: 0.9rem; color: var(--gd); font-weight: 700; margin-top: 10px; text-transform: uppercase; letter-spacing: 2px; }
+.session-dots { display: flex; gap: 8px; justify-content: center; margin-top: 28px; }
+.s-dot { width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.1); transition: 0.3s; }
+.s-dot.done { background: var(--ac); border-color: var(--ac); box-shadow: 0 0 15px var(--ac); }
+
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.stat-box { background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); padding: 18px; border-radius: 18px; text-align: center; }
+.stat-val { font-size: 1.8rem; font-weight: 900; color: var(--tx); margin: 6px 0; }
+.stat-lbl { font-size: 0.7rem; color: var(--dm); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.quote-box { background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(245, 197, 66, 0.05)); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 18px; padding: 22px 18px; margin-bottom: 18px; position: relative; overflow: hidden; }
+.quote-box::before { content: '"'; position: absolute; top: -10px; left: 10px; font-size: 5rem; color: rgba(139, 92, 246, 0.1); font-family: Georgia, serif; line-height: 1; }
+.quote-txt { font-size: 1rem; font-style: italic; color: var(--tx); line-height: 1.6; margin-bottom: 10px; position: relative; z-index: 1; }
+.quote-auth { font-size: 0.8rem; color: var(--gd); font-weight: 700; }
+
+.goal-card { display: flex; align-items: center; gap: 18px; }
+.goal-ring { width: 75px; height: 75px; border-radius: 50%; background: conic-gradient(var(--gn) var(--p, 0%), rgba(255,255,255,0.06) 0%); display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2); }
+.goal-ring-in { width: 60px; height: 60px; background: var(--bg2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1rem; }
+
+.item-row { display: flex; align-items: center; gap: 12px; padding: 14px; background: rgba(0,0,0,0.2); border-radius: 14px; margin-bottom: 10px; border: 1px solid transparent; transition: 0.2s; }
+.item-row:hover { border-color: var(--ln); background: rgba(255,255,255,0.02); }
+.prio-line { width: 4px; height: 22px; border-radius: 4px; }
+.chk-box { width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--dm); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; font-size: 0.8rem; }
+.chk-box.done { background: var(--gn); border-color: var(--gn); color: #fff; }
+.task-txt { flex: 1; font-size: 0.9rem; }
+.task-txt.done { text-decoration: line-through; opacity: 0.5; }
+
+.toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, var(--ac), #7c3aed); backdrop-filter: blur(16px); color: #fff; padding: 14px 28px; border-radius: 50px; font-size: 0.9rem; font-weight: 700; z-index: 1000; box-shadow: 0 12px 40px rgba(139, 92, 246, 0.4); opacity: 0; transition: opacity 0.3s, top 0.3s; pointer-events: none; }
+
+.footer-credit { text-align: center; padding: 20px; margin-top: 10px; }
+.footer-credit span { font-family: 'Dancing Script', cursive; font-size: 1.1rem; color: var(--gd); }
+
+@media (max-width: 380px) {
+  .timer-val { font-size: 3rem; }
+  .stat-val { font-size: 1.5rem; }
+  .tt-time { min-width: 60px; padding: 10px 8px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="hdr">
+    <div class="hdr-brand">
+      <div class="logo-glass"><span>🔱</span></div>
+      <div class="hdr-txt">
+        <div class="hdr-title">Trishul PRO</div>
+        <div class="hdr-author">by Abhishek Sharma</div>
+      </div>
+    </div>
+    <div class="hdr-date" id="hdrDate"></div>
+  </div>
+
+  <div class="mn" id="main"></div>
+
+  <div class="nav">
+    <div class="ni on" data-v="home" onclick="nav('home')"><div class="ni-icon">🏠</div><div>Home</div><div class="ni-dot"></div></div>
+    <div class="ni" data-v="planner" onclick="nav('planner')"><div class="ni-icon">📅</div><div>Planner</div><div class="ni-dot"></div></div>
+    <div class="ni" data-v="timer" onclick="nav('timer')"><div class="ni-icon">⏱️</div><div>Timer</div><div class="ni-dot"></div></div>
+    <div class="ni" data-v="stats" onclick="nav('stats')"><div class="ni-icon">📊</div><div>Stats</div><div class="ni-dot"></div></div>
+    <div class="ni" data-v="profile" onclick="nav('profile')"><div class="ni-icon">👤</div><div>Profile</div><div class="ni-dot"></div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Message</div>
+
+<script>
+/* ... AAPKA PURA JS EXACTLY SAME ... */
+const VER = 'trishul_pro_v6_abhishek';
+const QUOTES = [
+  { text: "Dream is not what you see in sleep, it is something that keeps you awake.", author: "A.P.J. Abdul Kalam" },
+  { text: "Discipline is the bridge between goals and accomplishment.", author: "Jim Rohn" },
+  { text: "Success is the sum of small efforts repeated day in and day out.", author: "Robert Collier" },
+  { text: "कर्मण्ये वाधिकारस्ते मा फलेषु कदाचन", author: "Bhagavad Gita" },
+  { text: "The harder you work, the greater you'll feel when you achieve it.", author: "Unknown" },
+  { text: "Your time is limited, don't waste it living someone else's life.", author: "Steve Jobs" }
+];
+
+const CATEGORIES = ['📚 Study', '🧘 Yoga/Meditation', '🍽️ Meal', '😴 Sleep', '🎮 Break', '💪 Exercise', '📝 Revision', '🎯 Practice'];
+
+const DEFAULT_STATE = {
+  name: 'Student', bio: '', aim: '', motivation: '', avatar: '',
+  goalMins: 240, minStreakMins: 60,
+  pomFocus: 25, pomBreak: 5, pomLong: 15,
+  tab: 'home', plannerTab: 'tasks', statsTab: 'week',
+  lastDate: getTodayISO(), streak: 0, maxStreak: 0,
+  history: {}, tasks: [], exams: [], holidays: [],
+  timetable: [
+    { id: 1, from: '05:00', to: '07:00', activity: 'Yoga + Meditation + Shlok', cat: '🧘 Yoga/Meditation' },
+    { id: 2, from: '07:00', to: '08:00', activity: 'Breakfast + Calm Screen', cat: '🍽️ Meal' },
+    { id: 3, from: '08:30', to: '10:30', activity: 'Math Class + Backlog + PYQ', cat: '📚 Study' },
+    { id: 4, from: '10:30', to: '12:30', activity: 'Music + PYQ Practice', cat: '🎯 Practice' },
+    { id: 5, from: '12:30', to: '13:40', activity: 'English Studies', cat: '📚 Study' },
+    { id: 6, from: '13:00', to: '15:00', activity: 'Free Time + Lunch', cat: '🎮 Break' },
+    { id: 7, from: '15:00', to: '15:30', activity: 'Reasoning Practice', cat: '🎯 Practice' },
+    { id: 8, from: '15:30', to: '17:30', activity: 'Current Affairs + GK', cat: '📚 Study' },
+    { id: 9, from: '17:30', to: '20:00', activity: 'Free Time + Dinner', cat: '🎮 Break' },
+    { id: 10, from: '20:00', to: '22:30', activity: 'English Grammar + Vocab + Reading', cat: '📝 Revision' },
+    { id: 11, from: '22:30', to: '05:00', activity: '6 Hours Sleep', cat: '😴 Sleep' }
+  ],
+  tmrRun: false, tmrMode: 'focus', tmrSecs: 25 * 60, sessions: 0,
+  calMonth: new Date().getMonth(), calYear: new Date().getFullYear(),
+};
+
+let STATE = { ...DEFAULT_STATE };
+let TMR_INT = null;
+let LAST_TICK = Date.now();
+let CHART_INSTANCE = null;
+
+function getTodayISO() { const d = new Date(); return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0]; }
+function getISO(date) { return new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split('T')[0]; }
+function fmtTime(mins) { if(!mins) return "0m"; let h=Math.floor(mins/60), m=Math.floor(mins%60); return h>0 ? `${h}h ${m}m` : `${m}m`; }
+function fmtSecs(secs) { let m=Math.floor(secs/60), s=Math.floor(secs%60); return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; }
+
+let tOut;
+function showToast(msg, color='linear-gradient(135deg, var(--ac), #7c3aed)') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.background = color;
+  t.style.opacity = '1'; t.style.top = '28px';
+  clearTimeout(tOut);
+  tOut = setTimeout(() => { t.style.opacity = '0'; t.style.top = '15px'; }, 2800);
+}
+
+function save() { let s = {...STATE, tmrRun: false}; localStorage.setItem(VER, JSON.stringify(s)); }
+function load() {
+  try {
+    let raw = localStorage.getItem(VER);
+    if(raw) {
+      let parsed = JSON.parse(raw);
+      STATE = {...DEFAULT_STATE, ...parsed, history: parsed.history || {}, timetable: parsed.timetable || DEFAULT_STATE.timetable};
+    }
+  } catch(e){}
+  checkDay();
+  document.getElementById('hdrDate').textContent = new Date().toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+}
+
+function checkDay() {
+  let today = getTodayISO();
+  if(!STATE.history[today]) STATE.history[today] = 0;
+  if(STATE.lastDate && STATE.lastDate !== today) {
+    let yest = new Date(); yest.setDate(yest.getDate() - 1);
+    let yestISO = getISO(yest);
+    if(STATE.lastDate === yestISO) {
+      let yMins = STATE.history[yestISO] || 0;
+      if(yMins >= STATE.minStreakMins || STATE.holidays.includes(yestISO)) STATE.streak++;
+      else STATE.streak = 0;
+    } else { STATE.streak = 0; }
+    if(STATE.streak > STATE.maxStreak) STATE.maxStreak = STATE.streak;
+    STATE.sessions = 0;
+  }
+  STATE.lastDate = today; save();
+}
+
+function addTime(m) { STATE.history[getTodayISO()] += m; save(); showToast(`+${m}m Focus Logged! 🎯`); render(); }
+
+function nav(tab) { STATE.tab = tab; save(); document.querySelectorAll('.ni').forEach(el => el.classList.toggle('on', el.dataset.v === tab)); render(); }
+function setPTab(pt) { STATE.plannerTab = pt; save(); render(); }
+function setSTab(st) { STATE.statsTab = st; save(); render(); }
+
+function getTmrTot() { return (STATE.tmrMode==='focus'?STATE.pomFocus : STATE.tmrMode==='break'?STATE.pomBreak : STATE.pomLong) * 60; }
+function tglTmr() { STATE.tmrRun ? pauseTmr() : startTmr(); }
+function startTmr() {
+  if(TMR_INT) return;
+  STATE.tmrRun = true; LAST_TICK = Date.now(); save(); upTmrUI();
+  TMR_INT = setInterval(() => {
+    let now = Date.now(); let dt = Math.floor((now - LAST_TICK)/1000);
+    if(dt > 0) { STATE.tmrSecs -= dt; LAST_TICK = now; if(STATE.tmrSecs <= 0) compTmr(); else upTmrUI(); }
+  }, 500);
+}
+function pauseTmr() { clearInterval(TMR_INT); TMR_INT=null; STATE.tmrRun=false; save(); upTmrUI(); }
+function rstTmr() { pauseTmr(); STATE.tmrSecs = getTmrTot(); save(); upTmrUI(); }
+function compTmr() {
+  pauseTmr();
+  if(STATE.tmrMode === 'focus') {
+    STATE.sessions++; addTime(STATE.pomFocus);
+    STATE.tmrMode = (STATE.sessions % 4 === 0) ? 'long' : 'break';
+    showToast('Focus Complete! Take a break. ☕');
+  } else {
+    STATE.tmrMode = 'focus';
+    showToast('Break over! Ready to focus? 💪');
+  }
+  STATE.tmrSecs = getTmrTot(); save(); upTmrUI();
+}
+function setTmrMode(m) { pauseTmr(); STATE.tmrMode = m; STATE.tmrSecs = getTmrTot(); save(); upTmrUI(); render(); }
+
+function upTmrUI() {
+  if(STATE.tab !== 'timer') return;
+  let val = document.getElementById('tVal');
+  let rng = document.getElementById('tRing');
+  let btn = document.getElementById('tBtn');
+  if(val) val.textContent = fmtSecs(STATE.tmrSecs);
+  if(rng) { let pct = Math.max(0, STATE.tmrSecs / getTmrTot()); rng.style.strokeDashoffset = 691 - (691 * pct); }
+  if(btn) btn.innerHTML = STATE.tmrRun ? '⏸ Pause' : '▶ Start';
+}
+
+function initChart() {
+  const ctx = document.getElementById('statsChart');
+  if(!ctx) return;
+  if(CHART_INSTANCE) { CHART_INSTANCE.destroy(); }
+
+  let labels = [], data = [], totalMins = 0, totalDaysCount = 1;
+  const tTab = STATE.statsTab;
+
+  if(tTab === 'week') {
+    totalDaysCount = 7;
+    for(let i=6; i>=0; i--) { let d = new Date(); d.setDate(d.getDate()-i); labels.push(d.toLocaleDateString('en-US', {weekday:'short'})); let m = STATE.history[getISO(d)] || 0; data.push(m / 60); totalMins += m; }
+  } else if(tTab === 'month') {
+    totalDaysCount = 30;
+    for(let i=29; i>=0; i--) { let d = new Date(); d.setDate(d.getDate()-i); labels.push(d.getDate()); let m = STATE.history[getISO(d)] || 0; data.push(m / 60); totalMins += m; }
+  } else if(tTab === 'quarter') {
+    totalDaysCount = 90;
+    for(let i=2; i>=0; i--) { let d = new Date(); d.setMonth(d.getMonth()-i); labels.push(d.toLocaleDateString('en-US', {month:'short'})); let monthMins = 0; Object.keys(STATE.history).forEach(dateStr => { let hDate = new Date(dateStr); if(hDate.getMonth() === d.getMonth() && hDate.getFullYear() === d.getFullYear()) { monthMins += STATE.history[dateStr]; } }); data.push(monthMins / 60); totalMins += monthMins; }
+  }
+
+  document.getElementById('stTotal').innerText = fmtTime(totalMins);
+  document.getElementById('stAvg').innerText = fmtTime(Math.round(totalMins / totalDaysCount));
+
+  let gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 350);
+  gradient.addColorStop(0, 'rgba(139, 92, 246, 0.9)');
+  gradient.addColorStop(1, 'rgba(139, 92, 246, 0.1)');
+
+  CHART_INSTANCE = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ label: 'Study Time (Hours)', data: data, backgroundColor: gradient, borderRadius: tTab==='month' ? 3 : 8, borderWidth: 0, hoverBackgroundColor: '#f5c542' }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(10, 14, 24, 0.95)', titleFont: { size: 13 }, bodyFont: { size: 14, weight: 'bold' }, padding: 14, callbacks: { label: function(context) { return `Focused: ${fmtTime(context.raw * 60)}`; } } } },
+      scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#8ca0c8', callback: val => val + 'h' } }, x: { grid: { display: false }, ticks: { color: '#8ca0c8', maxTicksLimit: tTab==='month' ? 10 : 7 } } }
+    }
+  });
+}
+
+window.addSlot = () => {
+  let from = document.getElementById('slotFrom').value;
+  let to = document.getElementById('slotTo').value;
+  let act = document.getElementById('slotAct').value;
+  let cat = document.getElementById('slotCat').value;
+  if(from && to && act) { STATE.timetable.push({ id: Date.now(), from, to, activity: act, cat }); STATE.timetable.sort((a,b) => a.from.localeCompare(b.from)); save(); render(); showToast('Slot Added! ✅'); }
+};
+window.delSlot = (id) => { STATE.timetable = STATE.timetable.filter(s => s.id !== id); save(); render(); };
+
+window.saveProfile = () => {
+  STATE.name = document.getElementById('profName').value || 'Student';
+  STATE.bio = document.getElementById('profBio').value;
+  STATE.aim = document.getElementById('profAim').value;
+  STATE.motivation = document.getElementById('profMotiv').value;
+  STATE.goalMins = (Number(document.getElementById('profGoal').value) || 4) * 60;
+  STATE.minStreakMins = (Number(document.getElementById('profStreak').value) || 1) * 60;
+  STATE.pomFocus = Number(document.getElementById('profPomF').value) || 25;
+  STATE.pomBreak = Number(document.getElementById('profPomB').value) || 5;
+  STATE.pomLong = Number(document.getElementById('profPomL').value) || 15;
+  if(!STATE.tmrRun) STATE.tmrSecs = getTmrTot();
+  save(); showToast('Profile Saved! 🎉'); render();
+};
+
+window.uploadAvatar = (e) => {
+  const file = e.target.files[0];
+  if(file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => { STATE.avatar = ev.target.result; save(); render(); };
+    reader.readAsDataURL(file);
+  }
+};
+
+window.cp = (txt) => { navigator.clipboard.writeText(txt).then(() => showToast('Copied! 📋')); };
+window.xp = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(STATE)], {type: 'application/json'})); a.download = `TrishulPRO_Backup_${getTodayISO()}.json`; a.click(); showToast('Data Exported! 💾'); };
+window.im = (e) => { let r = new FileReader(); r.onload = (ev) => { try { STATE = {...DEFAULT_STATE, ...JSON.parse(ev.target.result)}; save(); render(); showToast('Data Imported! ✅'); } catch(err) { showToast('Invalid File ❌'); } }; r.readAsText(e.target.files[0]); };
+window.resetAll = () => { if(confirm('Reset ALL data? This cannot be undone!')) { STATE = {...DEFAULT_STATE}; save(); render(); showToast('Data Reset! 🔄'); } };
+
+function render() {
+  const m = document.getElementById('main');
+  if(STATE.tab === 'home') m.innerHTML = UI.home();
+  else if(STATE.tab === 'planner') m.innerHTML = UI.planner();
+  else if(STATE.tab === 'timer') { m.innerHTML = UI.timer(); upTmrUI(); }
+  else if(STATE.tab === 'stats') { m.innerHTML = UI.stats(); setTimeout(initChart, 20); }
+  else if(STATE.tab === 'profile') m.innerHTML = UI.profile();
+}
+
+const UI = {
+  home: () => {
+    let q = QUOTES[new Date().getDate() % QUOTES.length];
+    let td = STATE.history[getTodayISO()] || 0;
+    let pct = Math.min(100, (td / STATE.goalMins) * 100);
+    
+    let now = new Date();
+    let nowTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    let currentSlot = STATE.timetable.find(s => s.from <= nowTime && s.to > nowTime);
+
+    let ttHtml = STATE.timetable.slice(0, 5).map(s => `
+      <div class="tt-slot" style="${currentSlot && currentSlot.id === s.id ? 'border: 2px solid var(--gd); background: rgba(245, 197, 66, 0.08);' : ''}">
+        <div class="tt-time">
+          <div class="tt-time-from">${s.from}</div>
+          <div class="tt-time-to">${s.to}</div>
+        </div>
+        <div class="tt-content">
+          <div>
+            <div class="tt-activity">${s.activity}</div>
+            <div class="tt-cat">${s.cat}</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    return `
+      <div class="quote-box">
+        <div class="quote-txt">"${q.text}"</div>
+        <div class="quote-auth">— ${q.author}</div>
+      </div>
+      
+      <div class="cd goal-card">
+        <div class="goal-ring" style="--p: ${pct}%">
+          <div class="goal-ring-in">${Math.round(pct)}%</div>
+        </div>
+        <div>
+          <h3 style="margin-bottom:4px;">Today's Progress</h3>
+          <div style="color:var(--dm); font-size:0.85rem;">Studied: <b style="color:var(--tx)">${fmtTime(td)}</b> / ${fmtTime(STATE.goalMins)}</div>
+          <div style="color:var(--gd); font-size:0.75rem; margin-top:4px;">🔥 ${STATE.streak} Day Streak</div>
+        </div>
+      </div>
+      
+      <div class="cd">
+        <h3>⚡ Quick Log</h3>
+        <div class="rw">
+          <button class="btn btn-glass btn-full" onclick="addTime(15)">+15m</button>
+          <button class="btn btn-glass btn-full" onclick="addTime(30)">+30m</button>
+          <button class="btn btn-primary btn-full" onclick="addTime(60)">+1h</button>
+        </div>
+      </div>
+
+      <div class="cd">
+        <div class="rw-between" style="margin-bottom:12px;">
+          <h3 style="margin-bottom:0;">📋 Today's Schedule</h3>
+          <button class="btn btn-glass btn-sm" onclick="nav('planner'); setPTab('timetable');">Edit</button>
+        </div>
+        ${ttHtml || '<div style="text-align:center; color:var(--dm); padding:20px;">No schedule set. Add one in Planner!</div>'}
+        ${STATE.timetable.length > 5 ? `<div style="text-align:center; margin-top:10px;"><button class="btn btn-glass btn-sm" onclick="nav('planner'); setPTab('timetable');">View All (${STATE.timetable.length})</button></div>` : ''}
+      </div>
+      
+      ${STATE.exams.length ? `<div class="cd" style="border-left: 4px solid var(--rd);"><h3 style="color:var(--rd)">🚨 Next Exam</h3><div style="font-size:0.95rem; font-weight:600;">${STATE.exams.sort((a,b)=>new Date(a.d)-new Date(b.d))[0].n}</div><div style="color:var(--dm); font-size:0.8rem; margin-top:4px;">${STATE.exams[0].d}</div></div>` : ''}
+      
+      <div class="footer-credit">Made with ❤️ <span>by Abhishek Sharma</span></div>
+    `;
+  },
+  
+  planner: () => {
+    let pt = STATE.plannerTab;
+    let catOptions = CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+    
+    let html = `
+      <div class="pill-nav">
+        <div class="pill ${pt==='timetable'?'active':''}" onclick="setPTab('timetable')">Timetable</div>
+        <div class="pill ${pt==='tasks'?'active':''}" onclick="setPTab('tasks')">Tasks</div>
+        <div class="pill ${pt==='exams'?'active':''}" onclick="setPTab('exams')">Exams</div>
+        <div class="pill ${pt==='cal'?'active':''}" onclick="setPTab('cal')">Calendar</div>
+      </div>
+    `;
+    
+    if(pt === 'timetable') {
+      html += `
+        <div class="cd">
+          <h3>➕ Add Time Slot</h3>
+          <div class="rw" style="margin-bottom:10px;">
+            <input type="time" id="slotFrom" style="margin:0;">
+            <span style="color:var(--dm);">to</span>
+            <input type="time" id="slotTo" style="margin:0;">
+          </div>
+          <input id="slotAct" placeholder="Activity (e.g., Math Study)" style="margin-bottom:10px;">
+          <select id="slotCat" style="margin-bottom:12px;">${catOptions}</select>
+          <button class="btn btn-primary btn-full" onclick="addSlot()">Add to Schedule</button>
+        </div>
+      `;
+      
+      if(STATE.timetable.length) {
+        html += `<div class="cd"><h3>📋 Your Daily Schedule</h3>`;
+        STATE.timetable.forEach(s => {
+          html += `
+            <div class="tt-slot">
+              <div class="tt-time">
+                <div class="tt-time-from">${s.from}</div>
+                <div class="tt-time-to">${s.to}</div>
+              </div>
+              <div class="tt-content">
+                <div>
+                  <div class="tt-activity">${s.activity}</div>
+                  <div class="tt-cat">${s.cat}</div>
+                </div>
+                <button class="btn btn-glass btn-sm" style="padding:8px 10px;" onclick="delSlot(${s.id})">🗑️</button>
+              </div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+    }
+    
+    else if(pt === 'tasks') {
+      window.addTask = () => { let v=document.getElementById('ti').value, p=document.getElementById('tp').value; if(v){ STATE.tasks.push({id:Date.now(), t:v, p, d:false}); save(); render(); showToast('Task Added! ✅'); }};
+      window.tgTask = (id) => { let t=STATE.tasks.find(x=>x.id===id); if(t){ t.d=!t.d; save(); render(); }};
+      window.dlTask = (id) => { STATE.tasks=STATE.tasks.filter(x=>x.id!==id); save(); render(); };
+      
+      html += `<div class="cd"><h3>➕ Add Task</h3><div class="rw"><input id="ti" placeholder="New Task..." style="margin:0"><select id="tp" style="width:100px;margin:0"><option value="#ef4444">High</option><option value="#f59e0b">Med</option><option value="#10b981">Low</option></select></div><button class="btn btn-primary btn-full" style="margin-top:12px" onclick="addTask()">Add Task</button></div>`;
+      
+      let pnd = STATE.tasks.filter(t=>!t.d); let dn = STATE.tasks.filter(t=>t.d);
+      if(pnd.length) { html += `<div class="cd"><h3>⏳ Pending Tasks</h3>`; pnd.forEach(t => { html += `<div class="item-row"><div class="prio-line" style="background:${t.p}"></div><div class="chk-box" onclick="tgTask(${t.id})"></div><div class="task-txt">${t.t}</div><button class="btn-glass" style="padding:6px 10px;border-radius:8px;border:none" onclick="dlTask(${t.id})">🗑️</button></div>`; }); html += `</div>`; }
+      if(dn.length) { html += `<div class="cd"><h3 style="color:var(--gn)">✅ Completed</h3>`; dn.forEach(t => { html += `<div class="item-row" style="opacity:0.6"><div class="chk-box done" onclick="tgTask(${t.id})">✓</div><div class="task-txt done">${t.t}</div><button class="btn-glass" style="padding:6px 10px;border-radius:8px;border:none" onclick="dlTask(${t.id})">🗑️</button></div>`; }); html += `</div>`; }
+    }
+    
+    else if(pt === 'exams') {
+      window.addEx = () => { let n=document.getElementById('en').value, d=document.getElementById('ed').value; if(n&&d){ STATE.exams.push({id:Date.now(), n, d}); save(); render(); showToast('Exam Added! 📚'); }};
+      window.dlEx = (id) => { STATE.exams=STATE.exams.filter(x=>x.id!==id); save(); render(); };
+      html += `<div class="cd"><h3>➕ Add Exam</h3><input id="en" placeholder="Exam Name"><input type="date" id="ed"><button class="btn btn-primary btn-full" onclick="addEx()">Save Exam</button></div>`;
+      if(STATE.exams.length) {
+        html += `<div class="cd"><h3>📚 Upcoming Exams</h3>`;
+        STATE.exams.sort((a,b)=>new Date(a.d)-new Date(b.d)).forEach(e => {
+          let days = Math.ceil((new Date(e.d) - new Date(getTodayISO())) / 86400000);
+          html += `<div class="item-row"><div style="flex:1"><div style="font-weight:700">${e.n}</div><div style="font-size:0.75rem;color:var(--dm)">${e.d}</div></div><div style="font-weight:900;color:${days<3?'var(--rd)':days<7?'var(--or)':'var(--gn)'}">${days<0?'Passed':days===0?'Today!':days+'d'}</div><button class="btn-glass" style="padding:6px 10px;border-radius:8px;border:none" onclick="dlEx(${e.id})">🗑️</button></div>`;
+        });
+        html += `</div>`;
+      }
+    }
+    
+    else if(pt === 'cal') {
+      window.chM = (d) => { STATE.calMonth+=d; if(STATE.calMonth>11){STATE.calMonth=0;STATE.calYear++;} else if(STATE.calMonth<0){STATE.calMonth=11;STATE.calYear--;} save(); render(); };
+      window.tgH = (iso) => { if(STATE.holidays.includes(iso)) STATE.holidays=STATE.holidays.filter(h=>h!==iso); else STATE.holidays.push(iso); checkDay(); render(); };
+      
+      let m=STATE.calMonth, y=STATE.calYear;
+      let dIM = new Date(y, m+1, 0).getDate(); let fD = new Date(y, m, 1).getDay();
+      let mN = new Date(y, m, 1).toLocaleString('default', {month:'long'});
+      
+      let ch = `<div class="rw-between" style="margin-bottom:16px"><button class="btn btn-glass btn-sm" onclick="chM(-1)">◀</button><h4 style="margin:0; font-size:1.1rem;">${mN} ${y}</h4><button class="btn btn-glass btn-sm" onclick="chM(1)">▶</button></div>`;
+      ch += `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;font-size:0.7rem;color:var(--dm);margin-bottom:10px;font-weight:700"><div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">`;
+      
+      for(let i=0; i<fD; i++) ch+= `<div></div>`;
+      for(let i=1; i<=dIM; i++) {
+        let dObj = new Date(y, m, i); dObj = new Date(dObj.getTime() - (dObj.getTimezoneOffset()*60000));
+        let iso = dObj.toISOString().split('T')[0];
+        let hG = (STATE.history[iso]||0) >= STATE.minStreakMins;
+        let isH = STATE.holidays.includes(iso);
+        let ex = STATE.exams.some(e=>e.d===iso);
+        let isT = iso===getTodayISO();
+        
+        let style = `aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:10px;font-size:0.85rem;font-weight:600;border:2px solid ${isT?'var(--gd)':'transparent'};cursor:pointer;position:relative;background:rgba(0,0,0,0.2);`;
+        if(isH) style += `background:rgba(239,68,68,0.25);color:var(--rd);`;
+        else if(hG) style += `background:rgba(16,185,129,0.25);color:var(--gn);`;
+        
+        ch += `<div style="${style}" onclick="tgH('${iso}')">${i}${ex?`<div style="position:absolute;bottom:3px;width:5px;height:5px;background:var(--ac);border-radius:50%;box-shadow:0 0 6px var(--ac)"></div>`:''}</div>`;
+      }
+      ch += `</div><div style="text-align:center;font-size:0.75rem;color:var(--dm);margin-top:14px">Tap to toggle Holiday | 🟢 Goal Met | 🔴 Holiday | 🟣 Exam</div>`;
+      html += `<div class="cd">${ch}</div>`;
+    }
+    
+    return html;
+  },
+
+  timer: () => {
+    let m = STATE.tmrMode; let clr = m==='focus' ? 'var(--ac)' : m==='break' ? 'var(--gn)' : 'var(--bl)';
+    let dots = ''; for(let i=1; i<=4; i++) dots += `<div class="s-dot ${(STATE.sessions % 4) >= i || (STATE.sessions>0 && STATE.sessions%4===0) ? 'done' : ''}"></div>`;
+
+    return `
+      <div class="pill-nav">
+        <div class="pill ${m==='focus'?'active':''}" onclick="setTmrMode('focus')">Focus</div>
+        <div class="pill ${m==='break'?'active':''}" onclick="setTmrMode('break')">Break</div>
+        <div class="pill ${m==='long'?'active':''}" onclick="setTmrMode('long')">Long Break</div>
+      </div>
+      
+      <div class="cd timer-wrap">
+        <svg class="svg-ring" width="250" height="250">
+          <circle class="svg-circle-bg" stroke-width="10" fill="transparent" r="110" cx="125" cy="125"/>
+          <circle id="tRing" class="svg-circle-prog" stroke-width="10" fill="transparent" r="110" cx="125" cy="125" style="stroke:${clr}"/>
+        </svg>
+        <div class="timer-content">
+          <div id="tVal" class="timer-val">${fmtSecs(STATE.tmrSecs)}</div>
+          <div class="timer-mode-txt" style="color:${clr}">${m==='focus'?'Stay Focused':'Relax & Recharge'}</div>
+        </div>
+      </div>
+      
+      <div class="session-dots">${dots}</div>
+      <div style="text-align:center;font-size:0.8rem;color:var(--dm);margin:16px 0 24px;">Sessions: ${STATE.sessions} | Today: ${fmtTime(STATE.history[getTodayISO()]||0)}</div>
+      
+      <div class="rw">
+        <button class="btn btn-glass" style="width:30%" onclick="rstTmr()">⏹ Reset</button>
+        <button id="tBtn" class="btn btn-primary" style="width:70%; background:${clr}; box-shadow:0 6px 24px ${clr}60" onclick="tglTmr()">${STATE.tmrRun?'⏸ Pause':'▶ Start'}</button>
+      </div>
+      
+      <div class="footer-credit" style="margin-top:30px;">Made with ❤️ <span>by Abhishek Sharma</span></div>
+    `;
+  },
+
+  stats: () => {
+    let st = STATE.statsTab;
+    return `
+      <div class="cd" style="text-align:center; display:flex; align-items:center; justify-content:center; gap:20px;">
+        <div style="font-size:4rem;font-weight:900;background:linear-gradient(135deg,var(--gd),var(--or));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1">${STATE.streak}</div>
+        <div style="text-align:left;">
+          <h3 style="margin-bottom:4px;">Day Streak 🔥</h3>
+          <div style="font-size:0.85rem;color:var(--dm)">Best: <b style="color:var(--tx)">${STATE.maxStreak} Days</b></div>
+        </div>
+      </div>
+
+      <div class="pill-nav">
+        <div class="pill ${st==='week'?'active':''}" onclick="setSTab('week')">7 Days</div>
+        <div class="pill ${st==='month'?'active':''}" onclick="setSTab('month')">30 Days</div>
+        <div class="pill ${st==='quarter'?'active':''}" onclick="setSTab('quarter')">Quarter</div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-lbl">Total Focus</div><div class="stat-val" id="stTotal">0h</div></div>
+        <div class="stat-box"><div class="stat-lbl">Daily Avg</div><div class="stat-val" id="stAvg" style="color:var(--ac)">0h</div></div>
+      </div>
+
+      <div class="cd" style="padding-bottom:12px;">
+        <h3 style="margin-bottom:18px;">📈 Study Analytics</h3>
+        <div style="position: relative; height: 260px; width: 100%;"><canvas id="statsChart"></canvas></div>
+      </div>
+      
+      <div class="footer-credit">Made with ❤️ <span>by Abhishek Sharma</span></div>
+    `;
+  },
+
+  profile: () => {
+    return `
+      <div class="cd profile-header">
+        <div class="profile-avatar">
+          <div class="profile-avatar-inner">
+            ${STATE.avatar ? `<img src="${STATE.avatar}" alt="Avatar">` : '👤'}
+          </div>
+        </div>
+        <label class="btn btn-glass btn-sm" style="cursor:pointer; margin-bottom:16px;">
+          📷 Change Photo <input type="file" accept="image/*" style="display:none" onchange="uploadAvatar(event)">
+        </label>
+        <div class="profile-name">${STATE.name}</div>
+        <div class="profile-bio">${STATE.bio || 'Add your bio in settings below...'}</div>
+      </div>
+      
+      ${STATE.aim || STATE.motivation ? `
+      <div class="cd">
+        <h3>🎯 Goals & Motivation</h3>
+        ${STATE.aim ? `<div class="goal-item"><div class="goal-title">My Aim</div><div class="goal-text">${STATE.aim}</div></div>` : ''}
+        ${STATE.motivation ? `<div class="goal-item" style="border-color:var(--gd);"><div class="goal-title" style="color:var(--or);">My Motivation</div><div class="goal-text">${STATE.motivation}</div></div>` : ''}
+      </div>
+      ` : ''}
+
+      <div class="cd">
+        <h3>👤 Edit Profile</h3>
+        <input id="profName" placeholder="Your Name" value="${STATE.name}">
+        <textarea id="profBio" placeholder="Write a short bio about yourself...">${STATE.bio}</textarea>
+        <textarea id="profAim" placeholder="What is your aim? (e.g., Crack UPSC, IIT-JEE...)">${STATE.aim}</textarea>
+        <textarea id="profMotiv" placeholder="What motivates you to study?">${STATE.motivation}</textarea>
+      </div>
+      
+      <div class="cd">
+        <h3>🎯 Study Goals</h3>
+        <div class="rw">
+          <div style="flex:1"><label style="font-size:0.75rem;color:var(--dm);font-weight:600;">Daily Goal (hrs)</label><input id="profGoal" type="number" step="0.5" value="${STATE.goalMins/60}"></div>
+          <div style="flex:1"><label style="font-size:0.75rem;color:var(--dm);font-weight:600;">Streak Min (hrs)</label><input id="profStreak" type="number" step="0.5" value="${STATE.minStreakMins/60}"></div>
+        </div>
+      </div>
+      
+      <div class="cd">
+        <h3>⏱️ Pomodoro Settings</h3>
+        <div class="rw">
+          <div style="flex:1"><label style="font-size:0.75rem;color:var(--dm);font-weight:600;">Focus (m)</label><input id="profPomF" type="number" value="${STATE.pomFocus}"></div>
+          <div style="flex:1"><label style="font-size:0.75rem;color:var(--dm);font-weight:600;">Break (m)</label><input id="profPomB" type="number" value="${STATE.pomBreak}"></div>
+          <div style="flex:1"><label style="font-size:0.75rem;color:var(--dm);font-weight:600;">Long (m)</label><input id="profPomL" type="number" value="${STATE.pomLong}"></div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="saveProfile()">💾 Save All Settings</button>
+      </div>
+
+      <div class="cd">
+        <h3>💾 Data Management</h3>
+        <button class="btn btn-glass btn-full" style="margin-bottom:10px" onclick="xp()">⬇️ Export Backup</button>
+        <label class="btn btn-glass btn-full" style="cursor:pointer; margin-bottom:10px;">⬆️ Import Data <input type="file" accept=".json" style="display:none" onchange="im(event)"></label>
+        <button class="btn btn-danger btn-full" onclick="resetAll()">🗑️ Reset All Data</button>
+      </div>
+
+      <div class="cd" style="background:linear-gradient(135deg,rgba(139,92,246,0.12),rgba(245,197,66,0.06));border-color:rgba(139,92,246,0.3)">
+        <h3>💝 Support Developer</h3>
+        <p style="font-size:0.85rem;color:var(--dm);margin-bottom:14px">If Trishul PRO helps you, consider supporting! 100% Ad-free & Private.</p>
+        <div style="background:rgba(0,0,0,0.3);padding:14px;border-radius:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-size:0.7rem;color:var(--gd);font-weight:700;">UPI ID</div><div style="font-weight:800;font-family:monospace;font-size:1rem;">8058288473@upi</div></div>
+          <button class="btn btn-glass btn-sm" onclick="cp('8058288473@upi')">📋</button>
+        </div>
+        <div style="background:rgba(0,0,0,0.3);padding:14px;border-radius:14px;display:flex;justify-content:space-between;align-items:center">
+          <div style="overflow:hidden"><div style="font-size:0.7rem;color:var(--ac);font-weight:700;">Email</div><div style="font-weight:800;font-family:monospace;font-size:0.85rem;">abhishekjeeadvanced@gmail.com</div></div>
+          <button class="btn btn-glass btn-sm" onclick="cp('abhishekjeeadvanced@gmail.com')">📋</button>
+        </div>
+      </div>
+      
+      <div class="footer-credit">Made with ❤️ <span>by Abhishek Sharma</span></div>
+    `;
+  }
+};
+
+window.onload = () => { load(); render(); };
+
+// ========= YAHAN SERVICE WORKER REGISTER KIYA GAYA HAI =========
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('Service Worker Registered Successfully!'))
+      .catch(err => console.log('Service Worker Registration Failed:', err));
+  });
+}
+// ===============================================================
+</script>
+</body>
+</html>
